@@ -7,10 +7,12 @@ def main_fun(video_path):
     id2class_map = {
         0: 'with helmet',
         1: 'without helmet',
+        2: 'rider',
+        3:'car'
     }
 
     # Load YOLO model
-    model_path = r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\helmet_best.pt"
+    model_path = r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\helmet.pt"
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"YOLO model not found: {model_path}")
     model = YOLO(model_path)

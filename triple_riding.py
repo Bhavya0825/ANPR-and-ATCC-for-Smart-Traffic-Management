@@ -77,5 +77,6 @@ def detect_triple_riding(video_path):
 
 
 # Input video path
-video_path = r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\sample detection videos\triple riding.mp4"
-detect_triple_riding(video_path)
+if __name__ == "__main__":
+    video_path = r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\sample detection videos\triple riding.mp4"
+    detect_triple_riding(video_path)
