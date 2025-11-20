@@ -115,9 +115,9 @@ Pull requests and suggestions are welcome!
 This project is released under the MIT License.
 
 💡 Author
-
 Bhavya 
-<img width="1895" height="987" alt="Screenshot 2025-11-18 213528" src="https://github.com/user-attachments/assets/ec48f7f6-32f5-407c-867d-9ea1e8512ed9" />
+
+
 <img width="799" height="594" alt="Screenshot 2025-11-18 233550" src="https://github.com/user-attachments/assets/a034ac4c-779a-43f3-bfb4-570f48179256" />
 <img width="1339" height="875" alt="Screenshot 2025-11-16 172837" src="https://github.com/user-attachments/assets/46118cdf-1567-4d3f-9770-32d001ce7907" />
 
