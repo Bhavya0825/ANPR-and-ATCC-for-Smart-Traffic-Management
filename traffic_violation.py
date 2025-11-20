@@ -154,7 +154,6 @@ class LineDetector:
 
 
 def extract_license_plate(frame, mask_line):
-
     gray = cv2.cvtColor(mask_line, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     gray = clahe.apply(gray)
@@ -205,7 +204,7 @@ def draw_penalized_text(frame):
         y += 60
 
 
-# ------------------------ DATABASE FIXED PART ------------------------
+# ------------------------ DATABASE FIXES ------------------------
 
 def create_database_and_table(host, user, password, database):
     try:
@@ -235,8 +234,6 @@ def create_database_and_table(host, user, password, database):
 
 
 def update_database_with_violation(plate_number, host, user, password, database):
-
-    # Clean plate before saving
     cleaned = plate_number.strip().upper()
     cleaned = cleaned.replace(" ", "")
     cleaned = re.sub(r"[^A-Z0-9]", "", cleaned)
@@ -260,6 +257,31 @@ def update_database_with_violation(plate_number, host, user, password, database)
 
     except Error as e:
         print("DB Update Error:", e)
+
+
+# ⭐ NEW FUNCTION — SAVE TIMESTAMP TO vehicle_data
+def save_violation_timestamp(plate_number, video_file):
+    try:
+        cleaned = plate_number.strip().upper().replace(" ", "")
+        cleaned = re.sub(r"[^A-Z0-9]", "", cleaned)
+
+        connection = mysql.connector.connect(
+            host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME
+        )
+        cursor = connection.cursor()
+
+        sql = """
+            INSERT INTO vehicle_data (number_plate, video_file, detected_at)
+            VALUES (%s, %s, NOW())
+        """
+        cursor.execute(sql, (cleaned, video_file))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+    except Exception as e:
+        print("Timestamp Error:", e)
 
 
 def print_all_violations(host, user, password, database):
@@ -302,12 +324,13 @@ def clear_license_plates(host, user, password, database):
         print("Error:", e)
 
 
-# ------------------- MAIN PROGRAM (UNCHANGED LOGIC) -------------------
+# ------------------- MAIN PROGRAM -------------------
 
 def main(video_path):
     vid = cv2.VideoCapture(video_path)
 
     create_database_and_table(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
+
     clear_license_plates(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME)
 
     if not vid.isOpened():
@@ -352,6 +375,9 @@ def main(video_path):
                 update_database_with_violation(
                     cleaned, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
                 )
+
+                # ⭐ NEW — SAVE TIMESTAMP FOR SEARCH PAGE
+                save_violation_timestamp(cleaned, os.path.basename(video_path))
 
         draw_penalized_text(frame)
 

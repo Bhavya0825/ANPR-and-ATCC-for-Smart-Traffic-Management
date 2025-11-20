@@ -111,18 +111,6 @@
                     </ul>
                 </div>
 
-                <!-- Vehicle Images Section -->
-                <div class="image-container">
-                    <h3>Vehicle Images</h3>
-
-                    {% if images %}
-                        {% for img in images %}
-                            <img src="{{ url_for('static', filename=img) }}" alt="Vehicle Image">
-                        {% endfor %}
-                    {% else %}
-                        <p>No images found</p>
-                    {% endif %}
-                </div>
 
             </div>
 

@@ -86,25 +86,76 @@ def search_license_plate():
 
     if request.method == 'POST' and number_plate:
 
-        # clean input same as traffic_violation.py
+        # CLEAN INPUT
         plate = number_plate.strip().upper().replace(" ", "")
         plate = re.sub(r"[^A-Z0-9]", "", plate)
 
         with connection.cursor(pymysql.cursors.DictCursor) as cursor:
-            sql_query = """
-                SELECT plate_number, violation_count
+
+            # 1️⃣ Fetch ANPR timestamps first
+            sql_anpr = """
+                SELECT detected_at, video_file
+                FROM vehicle_data
+                WHERE number_plate = %s
+                ORDER BY detected_at DESC
+            """
+            cursor.execute(sql_anpr, (plate,))
+            anpr_rows = cursor.fetchall()
+
+            # 2️⃣ Fetch Traffic Violation Count
+            sql_violation = """
+                SELECT violation_count
                 FROM license_plates
                 WHERE plate_number = %s
             """
-            cursor.execute(sql_query, (plate,))
-            results = cursor.fetchall()
+            cursor.execute(sql_violation, (plate,))
+            violation_row = cursor.fetchone()
 
-            if results:
+            # --------------------------
+            # CASE 1: ANPR FOUND
+            # --------------------------
+            if anpr_rows:
+                vehicle_data = {"license_no": plate}
+
+                detections = [
+                    {"detected_at": row["detected_at"].strftime("%Y-%m-%d %H:%M:%S")}
+                    for row in anpr_rows
+                ]
+
+                # Add violation count if available
+                if violation_row:
+                    vehicle_data["violation_count"] = violation_row["violation_count"]
+                else:
+                    vehicle_data["violation_count"] = 0
+
+                return render_template(
+                    'search.html',
+                    vehicle_data=vehicle_data,
+                    detections=detections,
+                    images=[],
+                    error=None
+                )
+
+            # --------------------------
+            # CASE 2: VIOLATION ONLY
+            # --------------------------
+            elif violation_row:
                 vehicle_data = {"license_no": plate}
                 detections = [
-                    {"id": idx + 1, "detected_at": f"Violations: {row['violation_count']}"}
-                    for idx, row in enumerate(results)
+                    {"detected_at": f"Violations: {violation_row['violation_count']}"}
                 ]
+
+                return render_template(
+                    'search.html',
+                    vehicle_data=vehicle_data,
+                    detections=detections,
+                    images=[],
+                    error=None
+                )
+
+            # --------------------------
+            # CASE 3: NOTHING FOUND
+            # --------------------------
             else:
                 error = "No details found for the entered number plate."
 
@@ -115,9 +166,6 @@ def search_license_plate():
         images=images,
         error=error
     )
-
-
-
 
 
 ################################################################################
