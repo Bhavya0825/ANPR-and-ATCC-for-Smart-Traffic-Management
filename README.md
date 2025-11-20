@@ -70,7 +70,7 @@ Development and testing were done on Python 3.9, so using the same version is st
 
 Use Python 3.9 for maximum compatibility and error-free execution.
 
-1️⃣ Clone the repository git clone https://github.com/jasleenkalsi13/ANPR-and-ATCC-For-Smart-Traffic-Management.git cd ANPR-and-ATCC-For-Smart-Traffic-Management
+1️⃣ Clone the repository https://github.com/Bhavya0825/ANPR-and-ATCC-for-Smart-Traffic-Management cd ANPR-and-ATCC-For-Smart-Traffic-Management
 
 2️⃣ Create a virtual environment (optional but recommended) macOS / Linux: python3.9 -m venv venv source venv/bin/activate
 
