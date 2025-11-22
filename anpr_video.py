@@ -8,12 +8,11 @@ import os
 import pymysql
 import pytesseract
 import dbconnection
+import easyocr
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-
 # ---------- HELPER FUNCTIONS ----------
-
 def sort_cont(character_contours): 
     i = 0
     boundingBoxes = [cv2.boundingRect(c) for c in character_contours] 
@@ -76,8 +75,7 @@ def segment_chars(plate_img, fixed_width):
     return None
 
 
-# ---------- PLATE FINDER CLASS ----------
-
+# ---------- PLATE FINDER CLASS (UNCHANGED) ----------
 class PlateFinder: 
     def __init__(self, minPlateArea, maxPlateArea): 
         self.min_area = minPlateArea 
@@ -126,7 +124,7 @@ class PlateFinder:
 
             if plateFound: 
                 chars_on_plate = self.find_characters_on_plate(cleaned)
-                if chars_on_plate is not None and len(chars_on_plate) == 8:
+                if chars_on_plate is not None:     # REMOVED len==8 restriction
                     x1, y1, w1, h1 = coords 
                     coords = (x1 + x, y1 + y)
                     return cleaned, chars_on_plate, coords 
@@ -172,73 +170,17 @@ class PlateFinder:
         return self.preRatioCheck(area, width, height)
 
 
-# ---------- OCR CLASS ----------
-
-class OCR: 
-    def __init__(self, modelFile, labelFile): 
-        self.model_file = modelFile 
-        self.label_file = labelFile 
-        self.label = self.load_label(self.label_file) 
-        self.graph = self.load_graph(self.model_file) 
-        self.sess = tf.compat.v1.Session(graph=self.graph, 
-                                         config=tf.compat.v1.ConfigProto()) 
-
-    def load_graph(self, modelFile): 
-        graph = tf.Graph() 
-        graph_def = tf.compat.v1.GraphDef() 
-        
-        with open(modelFile, "rb") as f: 
-            graph_def.ParseFromString(f.read()) 
-        
-        with graph.as_default(): 
-            tf.import_graph_def(graph_def) 
-        
-        return graph 
-
-    def load_label(self, labelFile): 
-        lines = tf.io.gfile.GFile(labelFile).readlines() 
-        return [l.rstrip() for l in lines]
-
-    def convert_tensor(self, image, outSize): 
-        image = cv2.resize(image, (outSize, outSize), interpolation=cv2.INTER_CUBIC) 
-        np_img = cv2.normalize(image.astype('float'), None, -0.5, .5, cv2.NORM_MINMAX) 
-        np_final = np.expand_dims(np_img, axis=0) 
-        return np_final 
-
-    def label_image(self, tensor): 
-        input_layer = "import/input"
-        output_layer = "import/final_result"
-
-        inp = self.graph.get_operation_by_name(input_layer) 
-        out = self.graph.get_operation_by_name(output_layer) 
-
-        results = self.sess.run(out.outputs[0], {inp.outputs[0]: tensor}) 
-        results = np.squeeze(results) 
-        top = results.argsort()[-1:][::-1] 
-        return self.label[top[0]] 
-
-    def label_image_list(self, listImages, imageSizeOutput): 
-        plate = "" 
-        for img in listImages:
-            plate += self.label_image(self.convert_tensor(img, imageSizeOutput))
-        return plate, len(plate)
-
+# ---------- EASY OCR (Replacement only here) ----------
+reader = easyocr.Reader(['en'], gpu=False)
 
 
 # ===================================================================
-# ========================= ANPR MAIN FUNCTION ======================
+# ========================= ANPR MAIN LOOP ==========================
 # ===================================================================
-
 def start_anpr(input_files):
 
     findPlate = PlateFinder(minPlateArea=4100, maxPlateArea=15000)
 
-    model = OCR(
-        modelFile=r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\anpr model files\binary_128_0.50_ver3.pb",
-        labelFile=r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\anpr model files\binary_128_0.50_labels_ver2.txt"
-    )
-
-    # ------------ MAIN PROCESSING LOOP -------------
     for file_path in input_files:
 
         cap = cv2.VideoCapture(file_path)
@@ -259,25 +201,20 @@ def start_anpr(input_files):
             if possible_plates:
                 for i, p in enumerate(possible_plates):
 
-                    chars_on_plate = findPlate.char_on_plate[i]
+                    # ---------------- EASY OCR HERE ----------------
+                    result = reader.readtext(p, detail=0)
+                    recognized_plate = "".join(result)
 
-                    recognized_plate, _ = model.label_image_list(chars_on_plate, imageSizeOutput=128)
+                    print("EasyOCR:", recognized_plate)
 
-
-                    print(recognized_plate)
-
-                    # ---------------- CLEAN DATA ---------------- #
-
-                    # clean number plate
+                    # Clean plate text
                     plate = recognized_plate.strip().upper()
                     plate = plate.replace(" ", "")
-                    plate = plate.replace("\n", "")
                     plate = ''.join([c for c in plate if c.isalnum()])
 
-                    # keep only filename for storing
                     video_filename = os.path.basename(file_path)
 
-                    # ---------------- DB INSERT FIXED ---------------- #
+                    # ---------------- DATABASE INSERT (UNCHANGED) ----------------
                     try:
                         connection = dbconnection.get_connection()
                         with connection.cursor() as cursor:
@@ -297,7 +234,7 @@ def start_anpr(input_files):
 
                     cv2.imshow('plate', p)
 
-                    if cv2.waitKey(25) & 0xFF == ord('q'):
+                    if cv2.waitKey(20) & 0xFF == ord('q'):
                         break
 
         cap.release()
@@ -305,7 +242,7 @@ def start_anpr(input_files):
     cv2.destroyAllWindows()
 
 
-# RUN DIRECTLY
+# DIRECT RUN
 if __name__ == "__main__":
     video_list = [
         r"C:\Users\balas\Documents\infosys\ANPR-and-ATCC-for-Smart-Traffic-Management\sample detection videos\anpr sample.mp4"

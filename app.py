@@ -284,9 +284,9 @@ def live_monitoring():
 #####################################################################################################################
 from atcc import *
 import os
-
-from anpr_video import PlateFinder  # Ensure PlateFinder is properly imported
-from anpr_video import OCR  # Ensure OCR is properly imported
+from anpr_video import PlateFinder  
+from anpr_video import *
+ # Ensure OCR is properly imported
 from anpr_video import *
 from ultralytics import YOLO
 
